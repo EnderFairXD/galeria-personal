@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlbumsPage } from '@/components/albums-page';
 import { AssetGrid } from '@/components/asset-grid';
 import { PermissionGate } from '@/components/permission-gate';
+import { UpdateBanner } from '@/components/update-banner';
+import { useGithubUpdate } from '@/hooks/use-github-update';
 import { useMediaAssets } from '@/hooks/use-media-assets';
 import { useSettings } from '@/hooks/use-settings';
 import { setViewerItems } from '@/utils/viewer-store';
@@ -36,6 +38,7 @@ function PhotosPage() {
 
 export default function HomeScreen() {
   const { palette, accentColor } = useSettings();
+  const { status, latestVersion, applyUpdate, dismissUpdate } = useGithubUpdate();
   const [page, setPage] = useState(0);
   const pagerRef = useRef<PagerView>(null);
 
@@ -83,6 +86,13 @@ export default function HomeScreen() {
             <AlbumsPage />
           </View>
         </PagerView>
+
+        <UpdateBanner
+          status={status}
+          latestVersion={latestVersion}
+          onPress={applyUpdate}
+          onDismiss={dismissUpdate}
+        />
       </SafeAreaView>
     </PermissionGate>
   );

@@ -10,6 +10,7 @@ interface UseGithubUpdateResult {
   status: UpdateStatus;
   latestVersion: string | null;
   applyUpdate: () => void;
+  dismissUpdate: () => void;
 }
 
 const REPO = 'EnderFairXD/galeria-personal';
@@ -119,5 +120,7 @@ export function useGithubUpdate(): UseGithubUpdateResult {
     });
   }, []);
 
-  return { status, latestVersion, applyUpdate };
+  const dismissUpdate = useCallback(() => setStatus('idle'), []);
+
+  return { status, latestVersion, applyUpdate, dismissUpdate };
 }

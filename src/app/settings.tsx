@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-nat
 import { Accents, type AccentName } from '@/constants/theme';
 import { useSettings, type ThemeMode } from '@/hooks/use-settings';
 
-const COLUMN_OPTIONS = [2, 3, 4, 5];
+const COLUMN_OPTIONS = [2, 3, 4, 5, 6, 8, 10];
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'auto', label: 'Automático' },
   { value: 'light', label: 'Claro' },
@@ -63,7 +63,8 @@ export default function SettingsScreen() {
           ))}
         </View>
         <Text style={[styles.caption, { color: palette.textSecondary }]}>
-          Fotos por fila en la cuadrícula.
+          Fotos por fila. También puedes pellizcar con dos dedos sobre la cuadrícula para verlas más
+          grandes o meter más en cada fila.
         </Text>
       </Section>
 

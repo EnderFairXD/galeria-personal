@@ -8,6 +8,7 @@ const STORAGE_KEY = 'galeria.albums.v1';
 export type AlbumEntry = {
   id: string;
   mediaType: MediaType;
+  creationTime: number | null;
 };
 
 export type CustomAlbum = {
@@ -71,7 +72,11 @@ export async function addToCustomAlbum(id: string, items: MediaItem[]): Promise<
       const existing = new Set(album.entries.map((entry) => entry.id));
       const added = items
         .filter((item) => !existing.has(item.id))
-        .map((item) => ({ id: item.id, mediaType: item.mediaType }));
+        .map((item) => ({
+          id: item.id,
+          mediaType: item.mediaType,
+          creationTime: item.creationTime,
+        }));
       return { ...album, entries: [...added, ...album.entries] };
     }),
   );
@@ -101,14 +106,18 @@ export async function forgetAssets(assetIds: string[]): Promise<void> {
   );
 }
 
+/** Ordena por fecha de la foto, no por cuándo se añadió al álbum: la cuadrícula
+ * agrupa por día y con el orden de inserción saldrían días repetidos. */
 export function entriesToMediaItems(entries: AlbumEntry[]): MediaItem[] {
-  return entries.map((entry) => ({
-    id: entry.id,
-    filename: null,
-    mediaType: entry.mediaType,
-    width: null,
-    height: null,
-    duration: null,
-    creationTime: null,
-  }));
+  return [...entries]
+    .sort((a, b) => (b.creationTime ?? 0) - (a.creationTime ?? 0))
+    .map((entry) => ({
+      id: entry.id,
+      filename: null,
+      mediaType: entry.mediaType,
+      width: null,
+      height: null,
+      duration: null,
+      creationTime: entry.creationTime ?? null,
+    }));
 }

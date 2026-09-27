@@ -1,75 +1,118 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { UpdateStatus } from '@/hooks/use-github-update';
+import { useSettings } from '@/hooks/use-settings';
 
 interface UpdateBannerProps {
   status: UpdateStatus;
   latestVersion: string | null;
   onPress: () => void;
+  onDismiss: () => void;
 }
 
-export function UpdateBanner({ status, latestVersion, onPress }: UpdateBannerProps) {
+/** Tarjeta flotante abajo: el aviso vivía pegado al borde superior, donde la
+ * barra de estado lo tapaba y no se podía pulsar con el pulgar. */
+export function UpdateBanner({ status, latestVersion, onPress, onDismiss }: UpdateBannerProps) {
+  const { palette, accentColor } = useSettings();
+  const insets = useSafeAreaInsets();
+
   if (status === 'idle') return null;
+
+  const containerStyle = [
+    styles.card,
+    { backgroundColor: palette.surface, bottom: insets.bottom + 16 },
+  ];
 
   if (status === 'downloading') {
     return (
-      <View style={[styles.banner, styles.info]}>
-        <ActivityIndicator color="#fff" size="small" />
-        <Text style={styles.text}>Descargando actualización…</Text>
+      <View style={containerStyle}>
+        <ActivityIndicator color={accentColor} size="small" />
+        <Text style={[styles.title, { color: palette.text }]}>Descargando actualización…</Text>
       </View>
     );
   }
 
   if (status === 'error') {
     return (
-      <View style={[styles.banner, styles.error]}>
-        <Text style={[styles.text, styles.centered]}>
-          No se pudo actualizar. Se volverá a intentar la próxima vez.
+      <View style={containerStyle}>
+        <Text style={[styles.body, styles.grow, { color: palette.textSecondary }]}>
+          No se pudo actualizar. Se reintentará la próxima vez que abras la app.
         </Text>
+        <Pressable onPress={onDismiss} hitSlop={12}>
+          <Text style={[styles.close, { color: palette.textSecondary }]}>✕</Text>
+        </Pressable>
       </View>
     );
   }
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.banner, styles.info, styles.spread, pressed && styles.pressed]}>
-      <Text style={styles.text}>✨ Versión {latestVersion ?? 'nueva'} disponible</Text>
-      <Text style={[styles.text, styles.underline]}>Actualizar</Text>
-    </Pressable>
+    <View style={containerStyle}>
+      <View style={styles.grow}>
+        <Text style={[styles.title, { color: palette.text }]}>Nueva versión disponible</Text>
+        <Text style={[styles.body, { color: palette.textSecondary }]}>
+          {latestVersion ?? 'Actualización'} lista para instalar
+        </Text>
+      </View>
+
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.button,
+          { backgroundColor: accentColor },
+          pressed && styles.pressed,
+        ]}>
+        <Text style={styles.buttonText}>Actualizar</Text>
+      </Pressable>
+
+      <Pressable onPress={onDismiss} hitSlop={12}>
+        <Text style={[styles.close, { color: palette.textSecondary }]}>✕</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
+  card: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
+    gap: 12,
     paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    elevation: 8,
+    shadowColor: '#000000',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
-  spread: {
-    justifyContent: 'space-between',
+  grow: {
+    flex: 1,
   },
-  info: {
-    backgroundColor: '#4f46e5',
+  title: {
+    fontWeight: '700',
   },
-  error: {
-    backgroundColor: 'rgba(220, 38, 38, 0.9)',
+  body: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  button: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 999,
+  },
+  buttonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  close: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   pressed: {
     opacity: 0.85,
-  },
-  text: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  centered: {
-    textAlign: 'center',
-  },
-  underline: {
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
 });

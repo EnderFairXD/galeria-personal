@@ -1,25 +1,50 @@
 {
   "expo": {
-    "name": "galeria-personal",
+    "name": "Galería",
     "slug": "galeria-personal",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "scheme": "galeriapersonal",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.enderfirexd.galeriapersonal",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0B0F",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "plugins": [
+      "expo-router",
+      "expo-image",
+      "expo-video",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0B0F",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 120
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Galería necesita acceso a tus fotos y vídeos para mostrarlos y organizarlos en álbumes.",
+          "savePhotosPermission": "Galería necesita permiso para guardar cambios en tus fotos y vídeos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
+      "./plugins/withApkInstaller",
+      "./plugins/withAndroidReleaseSigning"
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }

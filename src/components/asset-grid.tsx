@@ -158,7 +158,6 @@ export function AssetGrid({
         onEndReached={onEndReached}
         onEndReachedThreshold={1.2}
         ListEmptyComponent={empty}
-        removeClippedSubviews
         windowSize={7}
         initialNumToRender={12}
         style={{ backgroundColor: palette.background }}

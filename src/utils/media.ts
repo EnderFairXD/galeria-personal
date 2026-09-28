@@ -1,4 +1,5 @@
 import { Album, Asset, AssetField, MediaType, Query } from 'expo-media-library';
+import { getAlbumsAsync } from 'expo-media-library/legacy';
 
 export type MediaItem = {
   id: string;
@@ -80,29 +81,34 @@ export async function fetchMediaPage(options: {
   }));
 }
 
+/**
+ * El recuento y el título salen de la API legacy porque los da MediaStore ya
+ * contados. Con la API nueva habría que llamar a `album.getAssets()`, que
+ * materializa *todos* los assets de *cada* álbum solo para saber cuántos hay:
+ * en un móvil con miles de fotos eso agota la memoria y Android cierra la app.
+ */
 export async function fetchDeviceAlbums(includeVideos: boolean): Promise<DeviceAlbum[]> {
-  const albums = await Album.getAll();
+  const albums = await getAlbumsAsync();
 
   const described = await Promise.all(
     albums.map(async (album) => {
-      const [title, firstPage] = await Promise.all([
-        album.getTitle(),
-        fetchMediaPage({ offset: 0, limit: 1, includeVideos, albumId: album.id }),
-      ]);
-      const assets = await album.getAssets();
+      const cover = await fetchMediaPage({
+        offset: 0,
+        limit: 1,
+        includeVideos,
+        albumId: album.id,
+      });
 
       return {
         id: album.id,
-        title,
-        count: assets.length,
-        cover: firstPage[0] ?? null,
+        title: album.title,
+        count: album.assetCount,
+        cover: cover[0] ?? null,
       };
     }),
   );
 
-  return described
-    .filter((album) => album.count > 0)
-    .sort((a, b) => b.count - a.count);
+  return described.filter((album) => album.count > 0).sort((a, b) => b.count - a.count);
 }
 
 /** URI a resolución completa, para el visor. */

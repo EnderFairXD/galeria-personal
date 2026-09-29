@@ -20,6 +20,11 @@ function Navigation() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="viewer" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="new-album" options={{ presentation: 'modal', title: 'Nuevo álbum' }} />
+        <Stack.Screen
+          name="choose-album"
+          options={{ presentation: 'modal', title: 'Añadir a álbum' }}
+        />
+        <Stack.Screen name="hidden-albums" options={{ title: 'Álbumes ocultos' }} />
         <Stack.Screen name="pick" options={{ title: 'Elegir fotos' }} />
         <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
       </Stack>

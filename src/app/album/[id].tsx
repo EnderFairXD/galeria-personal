@@ -3,7 +3,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AssetGrid } from '@/components/asset-grid';
+import { SelectionBar } from '@/components/selection-bar';
+import { useMediaActions } from '@/hooks/use-media-actions';
 import { useMediaAssets } from '@/hooks/use-media-assets';
+import { useSelection } from '@/hooks/use-selection';
 import { useSettings } from '@/hooks/use-settings';
 import {
   deleteCustomAlbum,
@@ -25,15 +28,24 @@ export default function AlbumScreen() {
   const isCustom = kind === 'custom';
 
   const [customItems, setCustomItems] = useState<MediaItem[]>([]);
-  const [selection, setSelection] = useState<Set<string> | null>(null);
+  const selection = useSelection();
   const deviceAssets = useMediaAssets({ albumId: isCustom ? undefined : id, enabled: !isCustom });
 
   const items = isCustom ? customItems : deviceAssets.items;
+  const selectedItems = items.filter((item) => selection.selected?.has(item.id));
 
   const loadCustom = useCallback(async () => {
     const album = await getCustomAlbum(id);
     setCustomItems(album ? entriesToMediaItems(album.entries) : []);
   }, [id]);
+
+  const refresh = useCallback(() => {
+    selection.clear();
+    if (isCustom) loadCustom();
+    else deviceAssets.reload();
+  }, [selection, isCustom, loadCustom, deviceAssets]);
+
+  const { addToAlbum, confirmDelete } = useMediaActions(refresh);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,64 +71,39 @@ export default function AlbumScreen() {
     ]);
   };
 
-  const removeSelected = async () => {
-    if (!selection || selection.size === 0) return;
-    await removeFromCustomAlbum(id, [...selection]);
-    setSelection(null);
+  const removeFromAlbum = async () => {
+    await removeFromCustomAlbum(id, selectedItems.map((item) => item.id));
+    selection.clear();
     loadCustom();
-  };
-
-  const toggleSelected = (item: MediaItem) => {
-    setSelection((previous) => {
-      const next = new Set(previous ?? []);
-      if (next.has(item.id)) next.delete(item.id);
-      else next.add(item.id);
-      return next;
-    });
   };
 
   return (
     <View style={[styles.container, { backgroundColor: palette.background }]}>
-      {isCustom ? (
+      {isCustom && !selection.active ? (
         <View style={styles.toolbar}>
-          {selection ? (
-            <>
-              <Pressable onPress={() => setSelection(null)}>
-                <Text style={[styles.toolbarText, { color: palette.textSecondary }]}>Cancelar</Text>
-              </Pressable>
-              <Pressable onPress={removeSelected}>
-                <Text style={[styles.toolbarText, { color: '#ef4444' }]}>
-                  Quitar del álbum ({selection.size})
-                </Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Pressable
-                onPress={() => router.push({ pathname: '/pick', params: { albumId: id } })}
-                style={({ pressed }) => [
-                  styles.addButton,
-                  { backgroundColor: accentColor },
-                  pressed && styles.pressed,
-                ]}>
-                <Text style={styles.addButtonText}>+ Añadir fotos</Text>
-              </Pressable>
-              <Pressable onPress={albumOptions} hitSlop={12}>
-                <Text style={[styles.toolbarText, { color: palette.text }]}>⋯</Text>
-              </Pressable>
-            </>
-          )}
+          <Pressable
+            onPress={() => router.push({ pathname: '/pick', params: { albumId: id } })}
+            style={({ pressed }) => [
+              styles.addButton,
+              { backgroundColor: accentColor },
+              pressed && styles.pressed,
+            ]}>
+            <Text style={styles.addButtonText}>+ Añadir fotos</Text>
+          </Pressable>
+          <Pressable onPress={albumOptions} hitSlop={12}>
+            <Text style={[styles.options, { color: palette.text }]}>⋯</Text>
+          </Pressable>
         </View>
       ) : null}
 
       <AssetGrid
         items={items}
-        selectedIds={selection ?? undefined}
+        selectedIds={selection.selected ?? undefined}
         onEndReached={isCustom ? undefined : deviceAssets.loadMore}
-        onLongPressItem={isCustom ? toggleSelected : undefined}
+        onLongPressItem={(item) => selection.start(item.id)}
         onPressItem={(index) => {
-          if (selection) {
-            toggleSelected(items[index]);
+          if (selection.active) {
+            selection.toggle(items[index].id);
             return;
           }
           setViewerItems(items);
@@ -130,6 +117,18 @@ export default function AlbumScreen() {
           </Text>
         }
       />
+
+      {selection.active ? (
+        <SelectionBar
+          count={selectedItems.length}
+          onCancel={selection.clear}
+          onAddToAlbum={() => addToAlbum(selectedItems)}
+          onDelete={() => confirmDelete(selectedItems)}
+          extraAction={
+            isCustom ? { label: 'Quitar del álbum', onPress: removeFromAlbum } : undefined
+          }
+        />
+      ) : null}
     </View>
   );
 }
@@ -145,7 +144,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  toolbarText: {
+  options: {
     fontWeight: '600',
   },
   addButton: {

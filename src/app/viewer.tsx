@@ -7,8 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VideoPage } from '@/components/video-page';
 import { ZoomableImage } from '@/components/zoomable-image';
-import { forgetAssets } from '@/utils/custom-albums';
-import { deleteMedia, mediaUri, monthLabel } from '@/utils/media';
+import { mediaUri, monthLabel } from '@/utils/media';
+import { moveToTrash, TRASH_RETENTION_DAYS } from '@/utils/trash';
 import { getViewerItems } from '@/utils/viewer-store';
 
 export default function ViewerScreen() {
@@ -26,24 +26,33 @@ export default function ViewerScreen() {
   if (!current) return null;
 
   const confirmDelete = () => {
-    Alert.alert('Eliminar', '¿Eliminar este elemento del dispositivo?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteMedia([current.id]);
-          await forgetAssets([current.id]);
-          const remaining = items.filter((item) => item.id !== current.id);
-          if (remaining.length === 0) {
-            router.back();
-            return;
-          }
-          setItems(remaining);
-          setIndex(Math.min(index, remaining.length - 1));
+    Alert.alert(
+      'Mover a la papelera',
+      `Se quitará del móvil. Podrás recuperarlo durante ${TRASH_RETENTION_DAYS} días.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Mover a la papelera',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await moveToTrash([current]);
+            } catch {
+              // Diálogo de borrado cancelado: la foto se queda y seguimos en el visor.
+              return;
+            }
+
+            const remaining = items.filter((item) => item.id !== current.id);
+            if (remaining.length === 0) {
+              router.back();
+              return;
+            }
+            setItems(remaining);
+            setIndex(Math.min(index, remaining.length - 1));
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (

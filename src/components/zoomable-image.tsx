@@ -64,8 +64,13 @@ export function ZoomableImage({ uri, onTap }: ZoomableImageProps) {
       savedScale.value = 2.5;
     });
 
+  // runOnJS porque onTap es una función de React: los gestos corren en el hilo
+  // de animaciones y llamarla desde ahí revienta ("Tried to synchronously call
+  // a Remote Function"). Los demás gestos solo tocan shared values y se quedan
+  // en el hilo de animaciones, que es donde van fluidos.
   const singleTapGesture = Gesture.Tap()
     .numberOfTaps(1)
+    .runOnJS(true)
     .onEnd(() => {
       if (onTap) onTap();
     });

@@ -107,6 +107,17 @@ export function AlbumsPage() {
           </Text>
         </Pressable>
       ) : null}
+
+      <Pressable
+        onPress={() => router.push('/trash')}
+        style={({ pressed }) => [
+          styles.hiddenRow,
+          { backgroundColor: palette.surface },
+          pressed && styles.pressed,
+        ]}>
+        <Text style={[styles.hiddenLabel, { color: palette.text }]}>Papelera</Text>
+        <Text style={[styles.hiddenCount, { color: palette.textSecondary }]}>›</Text>
+      </Pressable>
     </ScrollView>
   );
 }

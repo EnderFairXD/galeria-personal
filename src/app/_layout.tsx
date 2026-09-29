@@ -1,11 +1,18 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { SettingsProvider, useSettings } from '@/hooks/use-settings';
+import { purgeExpired } from '@/utils/trash';
 
 function Navigation() {
   const { palette, isDark } = useSettings();
+
+  // Nadie garantiza que se abra la papelera, así que lo caducado se limpia al arrancar.
+  useEffect(() => {
+    purgeExpired();
+  }, []);
 
   return (
     <>
@@ -25,6 +32,7 @@ function Navigation() {
           options={{ presentation: 'modal', title: 'Añadir a álbum' }}
         />
         <Stack.Screen name="hidden-albums" options={{ title: 'Álbumes ocultos' }} />
+        <Stack.Screen name="trash" options={{ title: 'Papelera' }} />
         <Stack.Screen name="pick" options={{ title: 'Elegir fotos' }} />
         <Stack.Screen name="settings" options={{ title: 'Ajustes' }} />
       </Stack>

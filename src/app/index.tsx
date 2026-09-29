@@ -7,32 +7,59 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AlbumsPage } from '@/components/albums-page';
 import { AssetGrid } from '@/components/asset-grid';
 import { PermissionGate } from '@/components/permission-gate';
+import { SelectionBar } from '@/components/selection-bar';
 import { UpdateBanner } from '@/components/update-banner';
 import { useGithubUpdate } from '@/hooks/use-github-update';
+import { useMediaActions } from '@/hooks/use-media-actions';
 import { useMediaAssets } from '@/hooks/use-media-assets';
+import { useSelection } from '@/hooks/use-selection';
 import { useSettings } from '@/hooks/use-settings';
 import { setViewerItems } from '@/utils/viewer-store';
 
 const TABS = ['Fotos', 'Álbumes'];
 
 function PhotosPage() {
-  const { items, loadMore } = useMediaAssets();
+  const { items, loadMore, reload } = useMediaAssets();
   const { palette } = useSettings();
+  const selection = useSelection();
+  const { addToAlbum, confirmDelete } = useMediaActions(() => {
+    selection.clear();
+    reload();
+  });
+
+  const selectedItems = items.filter((item) => selection.selected?.has(item.id));
 
   return (
-    <AssetGrid
-      items={items}
-      onEndReached={loadMore}
-      onPressItem={(index) => {
-        setViewerItems(items);
-        router.push({ pathname: '/viewer', params: { index: String(index) } });
-      }}
-      empty={
-        <Text style={[styles.emptyText, { color: palette.textSecondary }]}>
-          No hay fotos ni vídeos en este móvil.
-        </Text>
-      }
-    />
+    <>
+      <AssetGrid
+        items={items}
+        selectedIds={selection.selected ?? undefined}
+        onEndReached={loadMore}
+        onLongPressItem={(item) => selection.start(item.id)}
+        onPressItem={(index) => {
+          if (selection.active) {
+            selection.toggle(items[index].id);
+            return;
+          }
+          setViewerItems(items);
+          router.push({ pathname: '/viewer', params: { index: String(index) } });
+        }}
+        empty={
+          <Text style={[styles.emptyText, { color: palette.textSecondary }]}>
+            No hay fotos ni vídeos en este móvil.
+          </Text>
+        }
+      />
+
+      {selection.active ? (
+        <SelectionBar
+          count={selectedItems.length}
+          onCancel={selection.clear}
+          onAddToAlbum={() => addToAlbum(selectedItems)}
+          onDelete={() => confirmDelete(selectedItems)}
+        />
+      ) : null}
+    </>
   );
 }
 

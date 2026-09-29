@@ -1,70 +1,37 @@
-import { Image } from 'expo-image';
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { router } from 'expo-router';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
+import { AlbumCard, albumSubtitle } from '@/components/album-card';
+import { useAlbums } from '@/hooks/use-albums';
 import { useSettings } from '@/hooks/use-settings';
-import { getCustomAlbums, type CustomAlbum } from '@/utils/custom-albums';
-import { fetchDeviceAlbums, mediaUri, type DeviceAlbum } from '@/utils/media';
-
-function AlbumCard({
-  title,
-  subtitle,
-  coverUri,
-  size,
-  onPress,
-}: {
-  title: string;
-  subtitle: string;
-  coverUri: string | null;
-  size: number;
-  onPress: () => void;
-}) {
-  const { palette } = useSettings();
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [{ width: size }, pressed && styles.pressed]}>
-      <View style={[styles.cover, { width: size, height: size, backgroundColor: palette.surface }]}>
-        {coverUri ? (
-          <Image source={{ uri: coverUri }} contentFit="cover" style={styles.coverImage} />
-        ) : (
-          <Text style={[styles.coverPlaceholder, { color: palette.textSecondary }]}>🖼</Text>
-        )}
-      </View>
-      <Text numberOfLines={1} style={[styles.albumTitle, { color: palette.text }]}>
-        {title}
-      </Text>
-      <Text style={[styles.albumSubtitle, { color: palette.textSecondary }]}>{subtitle}</Text>
-    </Pressable>
-  );
-}
+import { hideAlbum } from '@/utils/hidden-albums';
+import { mediaUri } from '@/utils/media';
 
 export function AlbumsPage() {
-  const { palette, accentColor, settings } = useSettings();
+  const { palette, accentColor } = useSettings();
   const { width } = useWindowDimensions();
-  const [customAlbums, setCustomAlbums] = useState<CustomAlbum[]>([]);
-  const [deviceAlbums, setDeviceAlbums] = useState<DeviceAlbum[]>([]);
+  const { custom, device, hidden, reload } = useAlbums();
 
   const cardSize = (width - 16 * 2 - 12) / 2;
+  const visibleCustom = custom.filter((album) => !hidden.has(album.id));
+  const visibleDevice = device.filter((album) => !hidden.has(album.id));
+  const hiddenCount = custom.length + device.length - visibleCustom.length - visibleDevice.length;
 
-  useFocusEffect(
-    useCallback(() => {
-      let ignore = false;
+  const askToHide = (id: string, title: string) => {
+    Alert.alert(title, 'Dejará de aparecer aquí. Podrás recuperarlo desde «Álbumes ocultos».', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Ocultar álbum',
+        onPress: async () => {
+          await hideAlbum(id);
+          reload();
+        },
+      },
+    ]);
+  };
 
-      getCustomAlbums().then((albums) => {
-        if (!ignore) setCustomAlbums(albums);
-      });
-      fetchDeviceAlbums(settings.includeVideos).then((albums) => {
-        if (!ignore) setDeviceAlbums(albums);
-      });
-
-      return () => {
-        ignore = true;
-      };
-    }, [settings.includeVideos]),
-  );
+  const openAlbum = (id: string, kind: 'custom' | 'device', title: string) =>
+    router.push({ pathname: '/album/[id]', params: { id, kind, title } });
 
   return (
     <ScrollView
@@ -83,26 +50,22 @@ export function AlbumsPage() {
         </Pressable>
       </View>
 
-      {customAlbums.length === 0 ? (
+      {visibleCustom.length === 0 ? (
         <Text style={[styles.empty, { color: palette.textSecondary }]}>
           Crea un álbum y añade las fotos que quieras. Las fotos no se copian ni se mueven de sitio:
           el álbum solo las agrupa.
         </Text>
       ) : (
         <View style={styles.grid}>
-          {customAlbums.map((album) => (
+          {visibleCustom.map((album) => (
             <AlbumCard
               key={album.id}
               title={album.name}
-              subtitle={`${album.entries.length} elemento${album.entries.length === 1 ? '' : 's'}`}
+              subtitle={albumSubtitle(album.entries.length)}
               coverUri={album.entries[0] ? mediaUri(album.entries[0].id) : null}
               size={cardSize}
-              onPress={() =>
-                router.push({
-                  pathname: '/album/[id]',
-                  params: { id: album.id, kind: 'custom', title: album.name },
-                })
-              }
+              onPress={() => openAlbum(album.id, 'custom', album.name)}
+              onLongPress={() => askToHide(album.id, album.name)}
             />
           ))}
         </View>
@@ -113,22 +76,37 @@ export function AlbumsPage() {
       </Text>
 
       <View style={styles.grid}>
-        {deviceAlbums.map((album) => (
+        {visibleDevice.map((album) => (
           <AlbumCard
             key={album.id}
             title={album.title}
-            subtitle={`${album.count} elemento${album.count === 1 ? '' : 's'}`}
+            subtitle={albumSubtitle(album.count)}
             coverUri={album.cover ? mediaUri(album.cover) : null}
             size={cardSize}
-            onPress={() =>
-              router.push({
-                pathname: '/album/[id]',
-                params: { id: album.id, kind: 'device', title: album.title },
-              })
-            }
+            onPress={() => openAlbum(album.id, 'device', album.title)}
+            onLongPress={() => askToHide(album.id, album.title)}
           />
         ))}
       </View>
+
+      <Text style={[styles.hint, { color: palette.textSecondary }]}>
+        Mantén pulsado un álbum para ocultarlo.
+      </Text>
+
+      {hiddenCount > 0 ? (
+        <Pressable
+          onPress={() => router.push('/hidden-albums')}
+          style={({ pressed }) => [
+            styles.hiddenRow,
+            { backgroundColor: palette.surface },
+            pressed && styles.pressed,
+          ]}>
+          <Text style={[styles.hiddenLabel, { color: palette.text }]}>Álbumes ocultos</Text>
+          <Text style={[styles.hiddenCount, { color: palette.textSecondary }]}>
+            {hiddenCount} ›
+          </Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
@@ -168,25 +146,23 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-  cover: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  coverImage: {
-    flex: 1,
-    width: '100%',
-  },
-  coverPlaceholder: {
-    fontSize: 28,
-  },
-  albumTitle: {
-    marginTop: 6,
-    fontWeight: '600',
-  },
-  albumSubtitle: {
+  hint: {
     fontSize: 12,
+    marginTop: 4,
+  },
+  hiddenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  hiddenLabel: {
+    fontWeight: '700',
+  },
+  hiddenCount: {
+    fontWeight: '600',
   },
   pressed: {
     opacity: 0.75,

@@ -1,16 +1,27 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useSettings } from '@/hooks/use-settings';
-import { createCustomAlbum } from '@/utils/custom-albums';
+import { addToCustomAlbum, createCustomAlbum } from '@/utils/custom-albums';
+import { getPendingSelection } from '@/utils/pending-selection';
 
 export default function NewAlbumScreen() {
+  const { addPending } = useLocalSearchParams<{ addPending?: string }>();
   const { palette, accentColor } = useSettings();
   const [name, setName] = useState('');
 
   const create = async () => {
     const album = await createCustomAlbum(name);
+
+    // Viniendo de "añadir a álbum", el álbum nace con las fotos ya elegidas y
+    // se vuelve a la cuadrícula en vez de entrar en él.
+    if (addPending) {
+      await addToCustomAlbum(album.id, getPendingSelection());
+      router.back();
+      return;
+    }
+
     router.replace({
       pathname: '/album/[id]',
       params: { id: album.id, kind: 'custom', title: album.name },

@@ -14,16 +14,16 @@ function capitalize(text: string): string {
 
 /** Clave de agrupación: el día natural, no la etiqueta — dos días distintos
  * nunca deben caer en el mismo grupo aunque se muestren parecidos. */
-export function dayKey(creationTime: number | null): string {
-  if (!creationTime) return 'sin-fecha';
-  const date = new Date(creationTime);
+export function dayKey(timestamp: number | null): string {
+  if (!timestamp) return 'sin-fecha';
+  const date = new Date(timestamp);
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-export function dayLabel(creationTime: number | null): string {
-  if (!creationTime) return 'Sin fecha';
+export function dayLabel(timestamp: number | null): string {
+  if (!timestamp) return 'Sin fecha';
 
-  const date = new Date(creationTime);
+  const date = new Date(timestamp);
   const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());

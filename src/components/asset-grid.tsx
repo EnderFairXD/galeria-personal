@@ -39,10 +39,10 @@ function buildSections(items: MediaItem[], columns: number): Section[] {
   let currentKey: string | null = null;
 
   for (const item of items) {
-    const key = dayKey(item.creationTime);
+    const key = dayKey(item.date);
 
     if (key !== currentKey) {
-      sections.push({ title: dayLabel(item.creationTime), data: [] });
+      sections.push({ title: dayLabel(item.date), data: [] });
       currentKey = key;
     }
 

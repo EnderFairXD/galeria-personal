@@ -2,7 +2,7 @@
   "expo": {
     "name": "Galería",
     "slug": "galeria-personal",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "scheme": "galeriapersonal",

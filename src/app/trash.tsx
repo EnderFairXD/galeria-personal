@@ -43,7 +43,7 @@ export default function TrashScreen() {
     width: null,
     height: null,
     duration: null,
-    creationTime: entry.deletedAt,
+    date: entry.deletedAt,
   }));
 
   const selectedEntries = entries.filter((entry) => selection.selected?.has(trashUri(entry)));

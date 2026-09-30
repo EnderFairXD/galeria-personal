@@ -8,7 +8,7 @@ const STORAGE_KEY = 'galeria.albums.v1';
 export type AlbumEntry = {
   id: string;
   mediaType: MediaType;
-  creationTime: number | null;
+  date: number | null;
 };
 
 export type CustomAlbum = {
@@ -75,7 +75,7 @@ export async function addToCustomAlbum(id: string, items: MediaItem[]): Promise<
         .map((item) => ({
           id: item.id,
           mediaType: item.mediaType,
-          creationTime: item.creationTime,
+          date: item.date,
         }));
       return { ...album, entries: [...added, ...album.entries] };
     }),
@@ -110,7 +110,6 @@ export async function forgetAssets(assetIds: string[]): Promise<void> {
  * agrupa por día y con el orden de inserción saldrían días repetidos. */
 export function entriesToMediaItems(entries: AlbumEntry[]): MediaItem[] {
   return [...entries]
-    .sort((a, b) => (b.creationTime ?? 0) - (a.creationTime ?? 0))
     .map((entry) => ({
       id: entry.id,
       filename: null,
@@ -118,6 +117,9 @@ export function entriesToMediaItems(entries: AlbumEntry[]): MediaItem[] {
       width: null,
       height: null,
       duration: null,
-      creationTime: entry.creationTime ?? null,
-    }));
+      // Las entradas guardadas antes de que esto pasara a llamarse date traían
+      // la fecha EXIF, que en muchas fotos venía vacía.
+      date: entry.date ?? (entry as { creationTime?: number }).creationTime ?? null,
+    }))
+    .sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
 }

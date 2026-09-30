@@ -8,7 +8,8 @@ export type MediaItem = {
   width: number | null;
   height: number | null;
   duration: number | null;
-  creationTime: number | null;
+  /** Fecha con la que se ordena y se agrupa. Ver `fetchMediaPage`. */
+  date: number | null;
 };
 
 export type DeviceAlbum = {
@@ -50,11 +51,19 @@ function buildQuery(options: {
   }
 
   return query
-    .orderBy({ key: AssetField.CREATION_TIME, ascending: !options.newestFirst })
+    .orderBy({ key: AssetField.MODIFICATION_TIME, ascending: !options.newestFirst })
     .offset(options.offset)
     .limit(options.limit);
 }
 
+/**
+ * Ordena por fecha de modificación, no por `creationTime`: esa es la fecha EXIF
+ * (`DATE_TAKEN`) y solo la escriben las cámaras, así que una foto descargada o
+ * recibida no la tiene y quedaba sin fecha al final de la lista. La de
+ * modificación (`DATE_MODIFIED`) está siempre y es cuando el archivo llegó al
+ * móvil, que para una descarga es justo lo que se espera ver; en una foto de la
+ * cámara ambas coinciden, porque el archivo se escribe al hacerla.
+ */
 export async function fetchMediaPage(options: {
   offset: number;
   limit?: number;
@@ -77,7 +86,7 @@ export async function fetchMediaPage(options: {
     width: entry.width,
     height: entry.height,
     duration: entry.duration,
-    creationTime: entry.creationTime,
+    date: entry.modificationTime ?? entry.creationTime,
   }));
 }
 

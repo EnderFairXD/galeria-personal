@@ -81,7 +81,7 @@ export default function ViewerScreen() {
             <Text style={styles.action}>✕</Text>
           </Pressable>
           <Text style={styles.title} numberOfLines={1}>
-            {current.filename ?? monthLabel(current.creationTime)}
+            {current.filename ?? monthLabel(current.date)}
           </Text>
           <Pressable onPress={confirmDelete} hitSlop={12}>
             <Text style={styles.action}>🗑</Text>

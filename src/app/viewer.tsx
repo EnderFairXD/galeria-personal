@@ -16,6 +16,7 @@ export default function ViewerScreen() {
   const [items, setItems] = useState(getViewerItems);
   const [index, setIndex] = useState(() => Number(params.index ?? 0));
   const [chromeVisible, setChromeVisible] = useState(true);
+  const [zoomed, setZoomed] = useState(false);
 
   const current = items[index];
 
@@ -60,7 +61,11 @@ export default function ViewerScreen() {
       <PagerView
         style={styles.pager}
         initialPage={index}
-        onPageSelected={(event) => setIndex(event.nativeEvent.position)}>
+        scrollEnabled={!zoomed}
+        onPageSelected={(event) => {
+          setIndex(event.nativeEvent.position);
+          setZoomed(false);
+        }}>
         {items.map((item, itemIndex) => (
           <View key={item.id} style={styles.page}>
             {item.mediaType === MediaType.VIDEO ? (
@@ -69,6 +74,7 @@ export default function ViewerScreen() {
               <ZoomableImage
                 uri={mediaUri(item)}
                 onTap={() => setChromeVisible((visible) => !visible)}
+                onZoomChange={setZoomed}
               />
             )}
           </View>

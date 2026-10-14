@@ -45,3 +45,8 @@ yarn-error.*
 *.aab
 *.keystore
 keystore.properties
+
+# Archivos de herramientas locales
+CLAUDE.md
+AGENTS.md
+.claude/

@@ -8,6 +8,7 @@ interface SelectionBarProps {
   onAddToAlbum: () => void;
   onDelete: () => void;
   onCancel: () => void;
+  onShare?: () => void;
   extraAction?: { label: string; onPress: () => void };
 }
 
@@ -16,6 +17,7 @@ export function SelectionBar({
   onAddToAlbum,
   onDelete,
   onCancel,
+  onShare,
   extraAction,
 }: SelectionBarProps) {
   const { palette, accentColor } = useSettings();
@@ -46,6 +48,20 @@ export function SelectionBar({
           ]}>
           <Text style={styles.buttonText}>Añadir a álbum</Text>
         </Pressable>
+
+        {/* Compartir solo con una elegida: el menú de Android admite un archivo
+            por vez a través de expo-sharing. */}
+        {onShare && count === 1 ? (
+          <Pressable
+            onPress={onShare}
+            style={({ pressed }) => [
+              styles.button,
+              { backgroundColor: palette.surfaceAlt },
+              pressed && styles.pressed,
+            ]}>
+            <Text style={[styles.buttonText, { color: palette.text }]}>Compartir</Text>
+          </Pressable>
+        ) : null}
 
         {extraAction ? (
           <Pressable

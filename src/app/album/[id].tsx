@@ -15,6 +15,7 @@ import {
   removeFromCustomAlbum,
 } from '@/utils/custom-albums';
 import type { MediaItem } from '@/utils/media';
+import { shareMedia } from '@/utils/share';
 import { setViewerItems } from '@/utils/viewer-store';
 
 export default function AlbumScreen() {
@@ -124,6 +125,7 @@ export default function AlbumScreen() {
           onCancel={selection.clear}
           onAddToAlbum={() => addToAlbum(selectedItems)}
           onDelete={() => confirmDelete(selectedItems)}
+          onShare={() => shareMedia(selectedItems[0])}
           extraAction={
             isCustom ? { label: 'Quitar del álbum', onPress: removeFromAlbum } : undefined
           }

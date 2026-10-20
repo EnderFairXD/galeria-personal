@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -24,20 +25,21 @@ interface ZoomableImageProps {
 }
 
 export function ZoomableImage({ uri, onTap, onZoomChange }: ZoomableImageProps) {
+  const [isZoomed, setIsZoomed] = useState(false);
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
-  const zoomed = useSharedValue(false);
 
-  const notifyZoom = (value: boolean) => {
-    'worklet';
-    if (zoomed.value === value) return;
-    zoomed.value = value;
-    if (onZoomChange) runOnJS(onZoomChange)(value);
-  };
+  const applyZoomState = useCallback(
+    (value: boolean) => {
+      setIsZoomed(value);
+      if (onZoomChange) onZoomChange(value);
+    },
+    [onZoomChange],
+  );
 
   const reset = () => {
     'worklet';
@@ -47,23 +49,27 @@ export function ZoomableImage({ uri, onTap, onZoomChange }: ZoomableImageProps) 
     savedScale.value = 1;
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
-    notifyZoom(false);
+    runOnJS(applyZoomState)(false);
   };
 
+  // El aviso sale al soltar, no en cada fotograma: avisar durante el pellizco
+  // cambia el carrusel en pleno gesto y el sistema lo cancela a media ampliación.
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
       const next = savedScale.value * event.scale;
       scale.value = Math.min(Math.max(next, MIN_SCALE), MAX_SCALE);
-      notifyZoom(scale.value > MIN_SCALE);
     })
     .onEnd(() => {
       savedScale.value = scale.value;
       if (scale.value <= MIN_SCALE) reset();
+      else runOnJS(applyZoomState)(true);
     });
 
+  // Solo arrastra cuando hay zoom. Activo siempre, se quedaba con cualquier
+  // deslizamiento de un dedo sin mover nada y el carrusel ya no podía pasar de foto.
   const panGesture = Gesture.Pan()
+    .enabled(isZoomed)
     .onUpdate((event) => {
-      if (savedScale.value <= MIN_SCALE) return;
       translateX.value = savedTranslateX.value + event.translationX;
       translateY.value = savedTranslateY.value + event.translationY;
     })
@@ -81,7 +87,7 @@ export function ZoomableImage({ uri, onTap, onZoomChange }: ZoomableImageProps) 
       }
       scale.value = withTiming(2.5);
       savedScale.value = 2.5;
-      notifyZoom(true);
+      runOnJS(applyZoomState)(true);
     });
 
   // runOnJS porque onTap es una función de React: los gestos corren en el hilo

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Galería",
     "slug": "galeria-personal",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "scheme": "galeriapersonal",
@@ -41,7 +41,8 @@
         }
       ],
       "./plugins/withApkInstaller",
-      "./plugins/withAndroidReleaseSigning"
+      "./plugins/withAndroidReleaseSigning",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

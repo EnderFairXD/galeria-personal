@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useSharedValue } from 'react-native-reanimated';
 
 import { useSettings } from '@/hooks/use-settings';
 import { dayKey, dayLabel } from '@/utils/dates';
@@ -77,10 +78,19 @@ export function AssetGrid({
 
   // Pellizcar para ver más o menos fotos por fila, como en las galerías al uso:
   // juntar los dedos mete más columnas, separarlos las reduce.
+  //
+  // El número de partida se fija al empezar el gesto. Si se calculara sobre el
+  // número actual, cada cambio movería la referencia del propio gesto y se
+  // dispararía: de 3 columnas, un pellizco corto saltaba a 1 o a 10 de golpe.
+  const startColumns = useSharedValue(columns);
+
   const pinchGesture = Gesture.Pinch()
     .runOnJS(true)
+    .onStart(() => {
+      startColumns.value = columns;
+    })
     .onUpdate((event) => {
-      const target = Math.round(columns / event.scale);
+      const target = Math.round(startColumns.value / event.scale);
       const clamped = Math.min(Math.max(target, MIN_COLUMNS), MAX_COLUMNS);
       if (clamped !== columns) update('columns', clamped);
     });

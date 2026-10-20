@@ -14,6 +14,7 @@ import { useMediaActions } from '@/hooks/use-media-actions';
 import { useMediaAssets } from '@/hooks/use-media-assets';
 import { useSelection } from '@/hooks/use-selection';
 import { useSettings } from '@/hooks/use-settings';
+import { shareMedia } from '@/utils/share';
 import { setViewerItems } from '@/utils/viewer-store';
 
 const TABS = ['Fotos', 'Álbumes'];
@@ -57,6 +58,7 @@ function PhotosPage() {
           onCancel={selection.clear}
           onAddToAlbum={() => addToAlbum(selectedItems)}
           onDelete={() => confirmDelete(selectedItems)}
+          onShare={() => shareMedia(selectedItems[0])}
         />
       ) : null}
     </>

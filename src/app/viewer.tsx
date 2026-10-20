@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { VideoPage } from '@/components/video-page';
 import { ZoomableImage } from '@/components/zoomable-image';
 import { mediaUri, monthLabel } from '@/utils/media';
+import { shareMedia } from '@/utils/share';
 import { moveToTrash, TRASH_RETENTION_DAYS } from '@/utils/trash';
 import { getViewerItems } from '@/utils/viewer-store';
 
@@ -89,6 +90,9 @@ export default function ViewerScreen() {
           <Text style={styles.title} numberOfLines={1}>
             {current.filename ?? monthLabel(current.date)}
           </Text>
+          <Pressable onPress={() => shareMedia(current)} hitSlop={12}>
+            <Text style={styles.action}>⤴</Text>
+          </Pressable>
           <Pressable onPress={confirmDelete} hitSlop={12}>
             <Text style={styles.action}>🗑</Text>
           </Pressable>

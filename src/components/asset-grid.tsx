@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { MediaType } from 'expo-media-library';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Pressable,
   SectionList,
@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useSharedValue } from 'react-native-reanimated';
+import { runOnJS, useSharedValue } from 'react-native-reanimated';
 
 import { useSettings } from '@/hooks/use-settings';
 import { dayKey, dayLabel } from '@/utils/dates';
@@ -82,17 +82,29 @@ export function AssetGrid({
   // El número de partida se fija al empezar el gesto. Si se calculara sobre el
   // número actual, cada cambio movería la referencia del propio gesto y se
   // dispararía: de 3 columnas, un pellizco corto saltaba a 1 o a 10 de golpe.
+  // El gesto vive en el hilo de animaciones y solo salta a JavaScript cuando el
+  // número cambia de verdad. Corriendo entero en JavaScript le costaba arrancar,
+  // porque es el mismo hilo que está dibujando las fotos mientras te desplazas.
+  const currentColumns = useSharedValue(columns);
   const startColumns = useSharedValue(columns);
+  const appliedColumns = useSharedValue(columns);
+
+  useEffect(() => {
+    currentColumns.value = columns;
+  }, [columns, currentColumns]);
 
   const pinchGesture = Gesture.Pinch()
-    .runOnJS(true)
     .onStart(() => {
-      startColumns.value = columns;
+      startColumns.value = currentColumns.value;
+      appliedColumns.value = currentColumns.value;
     })
     .onUpdate((event) => {
       const target = Math.round(startColumns.value / event.scale);
       const clamped = Math.min(Math.max(target, MIN_COLUMNS), MAX_COLUMNS);
-      if (clamped !== columns) update('columns', clamped);
+      if (clamped !== appliedColumns.value) {
+        appliedColumns.value = clamped;
+        runOnJS(update)('columns', clamped);
+      }
     });
 
   const renderRow = (row: Row) => (

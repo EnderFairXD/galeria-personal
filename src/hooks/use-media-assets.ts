@@ -35,7 +35,16 @@ export function useMediaAssets(options: { albumId?: string; enabled?: boolean } 
         includeVideos: settings.includeVideos,
       });
 
-      setItems((previous) => (offset === 0 ? page : [...previous, ...page]));
+      // Hay que descartar repetidas al encadenar páginas. Android guarda la
+      // fecha de modificación en segundos, así que un lote descargado de golpe
+      // comparte fecha exacta; entre empatadas el orden no es estable de una
+      // consulta a otra, y la misma foto volvía a salir en la página siguiente.
+      // Dos elementos con el mismo id rompen la lista justo en ese punto.
+      setItems((previous) => {
+        if (offset === 0) return page;
+        const known = new Set(previous.map((item) => item.id));
+        return [...previous, ...page.filter((item) => !known.has(item.id))];
+      });
       setHasMore(page.length === PAGE_SIZE);
       setLoading(false);
       loadingRef.current = false;

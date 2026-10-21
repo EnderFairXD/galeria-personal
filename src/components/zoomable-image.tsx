@@ -101,10 +101,13 @@ export function ZoomableImage({ uri, onTap, onZoomChange }: ZoomableImageProps) 
       if (onTap) onTap();
     });
 
-  const composedGesture = Gesture.Exclusive(
-    doubleTapGesture,
+  // Race y no Exclusive: en cadena, el pellizco tenía que esperar a que el
+  // doble toque descartara ser un doble toque antes de poder activarse, y por
+  // eso costaba tanto que el zoom arrancara. Aquí gana el primero que se
+  // reconozca, y entre los dos toques sí manda el doble.
+  const composedGesture = Gesture.Race(
     Gesture.Simultaneous(pinchGesture, panGesture),
-    singleTapGesture,
+    Gesture.Exclusive(doubleTapGesture, singleTapGesture),
   );
 
   const animatedStyle = useAnimatedStyle(() => ({

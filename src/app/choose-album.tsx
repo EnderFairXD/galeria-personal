@@ -56,6 +56,8 @@ export default function ChooseAlbumScreen() {
                 source={{ uri: mediaUri(album.entries[0].id) }}
                 contentFit="cover"
                 style={styles.coverImage}
+                // Sin esto se decodifica la foto entera para una miniatura de 52 px.
+                recyclingKey={album.entries[0].id}
               />
             ) : null}
           </View>
@@ -112,7 +114,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   coverImage: {
-    flex: 1,
+    width: 52,
+    height: 52,
   },
   rowBody: {
     flex: 1,

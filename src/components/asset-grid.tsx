@@ -158,12 +158,23 @@ export function AssetGrid({
               { width: size, height: size },
               pressed && styles.pressed,
             ]}>
+            {/* El tamaño va en números y no con flex: así se sabe antes de
+                medir el diseño y la foto se decodifica ya reducida. Con flex
+                no se conocía a tiempo y cada miniatura entraba en memoria casi
+                a resolución original: 148 MB de gráficos solo al abrir, y el
+                recolector de basura ahogaba al hilo principal hasta bloquear
+                la app. */}
             <Image
               source={{ uri: mediaUri(item) }}
               recyclingKey={item.id}
               contentFit="cover"
               transition={120}
-              style={styles.image}
+              // Sin caché en memoria: recorriendo miles de fotos se iban
+              // acumulando todas las miniaturas vistas hasta agotar el montón
+              // de Java, que tiene un techo fijo de 268 MB. En disco se siguen
+              // guardando, así que volver atrás tampoco relee del archivo.
+              cachePolicy="disk"
+              style={{ width: size, height: size }}
             />
 
             {item.mediaType === MediaType.VIDEO ? (
@@ -215,11 +226,16 @@ export function AssetGrid({
         }
         getItemLayout={(_, position) => ({ ...offsets[position], index: position })}
         stickyHeaderIndices={stickyIndices}
+        // En Android viene activado por defecto y rompe la app con la nueva
+        // arquitectura: intenta insertar una fila en un contenedor que ya ha
+        // vaciado y revienta con IndexOutOfBounds desde ReactClippingViewManager.
+        removeClippedSubviews={false}
         onEndReached={onEndReached}
         onEndReachedThreshold={1.2}
         ListEmptyComponent={empty}
-        windowSize={5}
+        windowSize={3}
         initialNumToRender={12}
+        maxToRenderPerBatch={6}
         style={{ backgroundColor: palette.background }}
         contentContainerStyle={styles.content}
       />

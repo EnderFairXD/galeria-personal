@@ -88,6 +88,9 @@ export default function ViewerScreen() {
         windowSize={3}
         initialNumToRender={1}
         maxToRenderPerBatch={2}
+        // Activado por defecto en Android, y con la nueva arquitectura tumba la
+        // app al reciclar las páginas (ReactClippingViewManager).
+        removeClippedSubviews={false}
         onMomentumScrollEnd={(event) => {
           setIndex(Math.round(event.nativeEvent.contentOffset.x / width));
           setZoomed(false);
@@ -95,7 +98,14 @@ export default function ViewerScreen() {
         renderItem={({ item, index: itemIndex }) => (
           <View style={[styles.page, { width }]}>
             {item.mediaType === MediaType.VIDEO ? (
-              <VideoPage uri={mediaUri(item)} active={itemIndex === index} />
+              // Solo el vídeo que estás viendo tiene reproductor. Cada uno abre
+              // un decodificador del sistema, y ahí es donde se quedaba sin
+              // memoria: el fallo saltaba al crear el decodificador de vídeo.
+              itemIndex === index ? (
+                <VideoPage uri={mediaUri(item)} active />
+              ) : (
+                <View style={styles.videoPlaceholder} />
+              )
             ) : (
               <ZoomableImage
                 uri={mediaUri(item)}
@@ -142,6 +152,10 @@ const styles = StyleSheet.create({
   },
   page: {
     flex: 1,
+  },
+  videoPlaceholder: {
+    flex: 1,
+    backgroundColor: '#000000',
   },
   topBar: {
     position: 'absolute',

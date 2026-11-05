@@ -29,7 +29,13 @@ export function AlbumCard({
       style={({ pressed }) => [{ width: size }, pressed && styles.pressed]}>
       <View style={[styles.cover, { width: size, height: size, backgroundColor: palette.surface }]}>
         {coverUri ? (
-          <Image source={{ uri: coverUri }} contentFit="cover" style={styles.coverImage} />
+          // Tamaño en números, no con flex: si no, la portada se decodifica a
+          // resolución original y se cargan todas al abrir la app.
+          <Image
+            source={{ uri: coverUri }}
+            contentFit="cover"
+            style={{ width: size, height: size }}
+          />
         ) : (
           <Text style={[styles.placeholder, { color: palette.textSecondary }]}>🖼</Text>
         )}
@@ -52,10 +58,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  coverImage: {
-    flex: 1,
-    width: '100%',
   },
   placeholder: {
     fontSize: 28,

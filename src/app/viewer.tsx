@@ -1,8 +1,15 @@
 import { MediaType } from 'expo-media-library';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import PagerView from 'react-native-pager-view';
+import {
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { VideoPage } from '@/components/video-page';
@@ -18,6 +25,7 @@ export default function ViewerScreen() {
   const [index, setIndex] = useState(() => Number(params.index ?? 0));
   const [chromeVisible, setChromeVisible] = useState(true);
   const [zoomed, setZoomed] = useState(false);
+  const { width } = useWindowDimensions();
 
   const current = items[index];
 
@@ -59,16 +67,33 @@ export default function ViewerScreen() {
 
   return (
     <View style={styles.container}>
-      <PagerView
-        style={styles.pager}
-        initialPage={index}
+      {/* Lista virtualizada y no un carrusel con todas las páginas: el carrusel
+          creaba una imagen por cada foto cargada en la cuadrícula (y un
+          reproductor por cada vídeo), así que tras bajar un rato abrir una foto
+          reventaba la memoria. Aquí solo viven las vecinas. */}
+      <FlatList
+        data={items}
+        extraData={index}
+        keyExtractor={(item) => item.id}
+        horizontal
+        pagingEnabled
         scrollEnabled={!zoomed}
-        onPageSelected={(event) => {
-          setIndex(event.nativeEvent.position);
+        showsHorizontalScrollIndicator={false}
+        initialScrollIndex={index}
+        getItemLayout={(_, itemIndex) => ({
+          length: width,
+          offset: width * itemIndex,
+          index: itemIndex,
+        })}
+        windowSize={3}
+        initialNumToRender={1}
+        maxToRenderPerBatch={2}
+        onMomentumScrollEnd={(event) => {
+          setIndex(Math.round(event.nativeEvent.contentOffset.x / width));
           setZoomed(false);
-        }}>
-        {items.map((item, itemIndex) => (
-          <View key={item.id} style={styles.page}>
+        }}
+        renderItem={({ item, index: itemIndex }) => (
+          <View style={[styles.page, { width }]}>
             {item.mediaType === MediaType.VIDEO ? (
               <VideoPage uri={mediaUri(item)} active={itemIndex === index} />
             ) : (
@@ -79,8 +104,8 @@ export default function ViewerScreen() {
               />
             )}
           </View>
-        ))}
-      </PagerView>
+        )}
+      />
 
       {chromeVisible ? (
         <SafeAreaView style={styles.topBar} edges={['top']}>
@@ -114,9 +139,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
-  },
-  pager: {
-    flex: 1,
   },
   page: {
     flex: 1,

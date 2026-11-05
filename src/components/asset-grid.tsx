@@ -3,7 +3,7 @@ import { MediaType } from 'expo-media-library';
 import { useEffect, useMemo } from 'react';
 import {
   Pressable,
-  SectionList,
+  FlatList,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -21,8 +21,11 @@ const EDGE = 6;
 const MIN_COLUMNS = 1;
 const MAX_COLUMNS = 10;
 
-type Row = { key: string; items: MediaItem[] };
-type Section = { title: string; data: Row[] };
+const HEADER_HEIGHT = 44;
+
+type GridRow =
+  | { kind: 'header'; key: string; title: string }
+  | { kind: 'row'; key: string; items: MediaItem[] };
 
 interface AssetGridProps {
   items: MediaItem[];
@@ -33,28 +36,36 @@ interface AssetGridProps {
   empty?: React.ReactElement;
 }
 
-/** Agrupa por día y trocea cada día en filas de `columns`: SectionList no sabe
- * de columnas, así que una "fila" es el elemento que se renderiza. */
-function buildSections(items: MediaItem[], columns: number): Section[] {
-  const sections: Section[] = [];
-  let currentKey: string | null = null;
+/**
+ * Aplana la galería en una sola lista de filas, mezclando cabeceras de día y
+ * filas de fotos. Con una lista por secciones había que adivinar la altura de
+ * cada bloque, y al bajar rápido las posiciones estimadas no cuadraban con las
+ * reales y la cuadrícula se descolocaba. Aquí todas las filas tienen una altura
+ * conocida de antemano, así que la posición de cada una es exacta.
+ */
+function buildRows(items: MediaItem[], columns: number): GridRow[] {
+  const rows: GridRow[] = [];
+  let currentDay: string | null = null;
+  let lastRow: Extract<GridRow, { kind: 'row' }> | null = null;
 
   for (const item of items) {
-    const key = dayKey(item.date);
+    const day = dayKey(item.date);
 
-    if (key !== currentKey) {
-      sections.push({ title: dayLabel(item.date), data: [] });
-      currentKey = key;
+    if (day !== currentDay) {
+      rows.push({ kind: 'header', key: `header-${day}`, title: dayLabel(item.date) });
+      currentDay = day;
+      lastRow = null;
     }
 
-    const section = sections[sections.length - 1];
-    const lastRow = section.data[section.data.length - 1];
-
-    if (lastRow && lastRow.items.length < columns) lastRow.items.push(item);
-    else section.data.push({ key: item.id, items: [item] });
+    if (lastRow && lastRow.items.length < columns) {
+      lastRow.items.push(item);
+    } else {
+      lastRow = { kind: 'row', key: item.id, items: [item] };
+      rows.push(lastRow);
+    }
   }
 
-  return sections;
+  return rows;
 }
 
 export function AssetGrid({
@@ -70,10 +81,33 @@ export function AssetGrid({
   const columns = settings.columns;
 
   const size = (width - EDGE * 2 - GAP * (columns - 1)) / columns;
-  const sections = useMemo(() => buildSections(items, columns), [items, columns]);
+  const rows = useMemo(() => buildRows(items, columns), [items, columns]);
   const indexById = useMemo(
     () => new Map(items.map((item, index) => [item.id, index])),
     [items],
+  );
+
+  const rowHeight = size + GAP;
+  const offsets = useMemo(() => {
+    const result: { length: number; offset: number }[] = [];
+    let offset = 0;
+
+    for (const row of rows) {
+      const length = row.kind === 'header' ? HEADER_HEIGHT : rowHeight;
+      result.push({ length, offset });
+      offset += length;
+    }
+
+    return result;
+  }, [rows, rowHeight]);
+
+  const stickyIndices = useMemo(
+    () =>
+      rows.reduce<number[]>((acc, row, position) => {
+        if (row.kind === 'header') acc.push(position);
+        return acc;
+      }, []),
+    [rows],
   );
 
   // Pellizcar para ver más o menos fotos por fila, como en las galerías al uso:
@@ -107,8 +141,8 @@ export function AssetGrid({
       }
     });
 
-  const renderRow = (row: Row) => (
-    <View style={styles.row}>
+  const renderPhotoRow = (row: Extract<GridRow, { kind: 'row' }>) => (
+    <View style={[styles.row, { height: size }]}>
       {row.items.map((item) => {
         const index = indexById.get(item.id) ?? 0;
         const selected = selectedIds?.has(item.id) ?? false;
@@ -167,20 +201,24 @@ export function AssetGrid({
 
   return (
     <GestureDetector gesture={pinchGesture}>
-      <SectionList
-        sections={sections}
+      <FlatList
+        data={rows}
         keyExtractor={(row) => row.key}
-        renderItem={({ item }) => renderRow(item)}
-        renderSectionHeader={({ section }) => (
-          <View style={[styles.sectionHeader, { backgroundColor: palette.background }]}>
-            <Text style={[styles.sectionTitle, { color: palette.text }]}>{section.title}</Text>
-          </View>
-        )}
-        stickySectionHeadersEnabled
+        renderItem={({ item }) =>
+          item.kind === 'header' ? (
+            <View style={[styles.sectionHeader, { backgroundColor: palette.background }]}>
+              <Text style={[styles.sectionTitle, { color: palette.text }]}>{item.title}</Text>
+            </View>
+          ) : (
+            renderPhotoRow(item)
+          )
+        }
+        getItemLayout={(_, position) => ({ ...offsets[position], index: position })}
+        stickyHeaderIndices={stickyIndices}
         onEndReached={onEndReached}
         onEndReachedThreshold={1.2}
         ListEmptyComponent={empty}
-        windowSize={7}
+        windowSize={5}
         initialNumToRender={12}
         style={{ backgroundColor: palette.background }}
         contentContainerStyle={styles.content}
@@ -194,6 +232,8 @@ const styles = StyleSheet.create({
     paddingBottom: 96,
   },
   sectionHeader: {
+    height: HEADER_HEIGHT,
+    justifyContent: 'flex-end',
     paddingHorizontal: EDGE + 4,
     paddingTop: 16,
     paddingBottom: 8,
